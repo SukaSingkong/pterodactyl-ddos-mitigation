@@ -1,131 +1,111 @@
-# Pterodactyl DDoS Mitigation by Syncara Cloud
+# 🛡️ Pterodactyl DDoS Mitigation by Syncara Cloud
 
-Lightweight **per-port DDoS/flood mitigation** for Pterodactyl Wings nodes.
+Unofficial per-port DDoS/flood mitigation scripts for **Pterodactyl Wings** nodes. Built for game-hosting environments where many customer servers share one public IP while using different allocation ports.
 
-This project adds a local mitigation layer using **nftables** at network ingress. Traffic is evaluated **per destination port**, so an attack against one game-server allocation can be limited without applying the same limiter to every other customer port on the node.
+This project is not affiliated with or endorsed by the official Pterodactyl Project.
 
-> This project is intended as an additional local protection layer. It does **not** replace upstream DDoS filtering from your datacenter, transit provider, or hosting network.
+## Installation
+
+To install, simply run the following command as **root**:
+
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/SukaSingkong/pterodactyl-ddos-mitigation/main/install.sh)
+```
+
+The installer is interactive and will guide you through:
+
+- WAN interface detection
+- Public IPv4 detection
+- Discord webhook configuration and live test
+- Detection of existing UFW port ranges
+- Selection of the port range(s) you want to protect
+- Protection profile selection
+- nftables validation
+- systemd service installation
+
+> **Note:** Run the command from a root shell. On some systems, placing `sudo` directly in front of a process-substitution command may not work as expected.
 
 ## Features
 
-- Per-destination-port mitigation
-- TCP SYN flood protection
-- Generic TCP packet flood protection
-- UDP packet flood protection
-- Uses nftables `netdev ingress` before Docker DNAT
-- Reads existing **UFW port ranges** during installation
-- Lets you select which UFW ranges should be protected
-- Keeps TCP and UDP protection independent
-- Automatic WAN interface detection
-- Automatic IPv4 detection
-- Interactive two-way setup wizard
-- Discord webhook setup and live webhook test
-- Discord attack and recovery embeds
-- Recommended, Relaxed, Strict, and Custom protection profiles
-- Automatic systemd startup
-- Automatic restoration of the mitigation table if it disappears
-- Firewall backup before installation
-- Does not flush the entire nftables ruleset
-- Does not remove Docker or UFW rules
+- Automatic installation of required dependencies.
+- Automatic detection of the primary WAN interface.
+- Automatic detection of the node's IPv4 address.
+- Automatic discovery of Pterodactyl/game allocation ranges from UFW.
+- Interactive selection of one or multiple UFW port ranges.
+- Separate TCP and UDP protection based on the existing UFW rules.
+- Per-destination-port TCP SYN flood mitigation.
+- Per-destination-port generic TCP packet flood mitigation.
+- Per-destination-port UDP flood mitigation.
+- Protection applied at nftables `netdev ingress`, before Docker DNAT.
+- Discord webhook notifications for attack detection.
+- Discord webhook notifications when traffic returns to normal.
+- Live Discord webhook validation during installation.
+- Recommended, Relaxed, Strict, and Custom protection profiles.
+- Automatic startup through systemd.
+- Automatic restoration of the mitigation table if it disappears.
+- Firewall backup before installation.
+- Uninstallation support.
+- Does not intentionally flush the complete nftables ruleset.
+- Does not intentionally remove Docker or UFW firewall rules.
 
-## How it works
+## Supported installations
 
-Example node:
+This project is intended for Pterodactyl Wings nodes using Docker and nftables-compatible networking.
+
+### Supported operating systems
+
+| Operating System | Version | Supported |
+| --- | ---: | :---: |
+| Debian | 13 | ✅ |
+| Debian | 12 | ⚠️ |
+| Ubuntu | 24.04 | ⚠️ |
+| Ubuntu | 22.04 | ⚠️ |
+| Other distributions | — | 🔴 |
+
+`✅` = primary supported environment  
+`⚠️` = may work, but is not the primary tested target  
+`🔴` = currently unsupported by the installer
+
+The primary target is **Debian 13 (Trixie)**.
+
+## How the protection works
+
+Pterodactyl Wings publishes game-server allocation ports through Docker.
+
+For example:
 
 ```text
 Public IP: 203.0.113.10
 
-Client A -> TCP/25565
-Client B -> UDP/19132
-Client C -> TCP/25653
+Client A → TCP/25565
+Client B → UDP/19132
+Client C → TCP/25653
 ```
 
-If only `TCP/25565` exceeds the configured threshold:
+If Client A receives a flood on `TCP/25565`, the limiter for `25565` is evaluated independently:
 
 ```text
-TCP/25565 -> excess traffic dropped
-UDP/19132 -> unaffected
-TCP/25653 -> unaffected
+TCP/25565 → attack → excess traffic dropped
+UDP/19132 → normal → unaffected
+TCP/25653 → normal → unaffected
 ```
 
 The limiter key is the **destination port**, not the entire public IP.
 
-For TCP SYN floods, established TCP sessions are not matched by the SYN-only limiter. A separate high-rate generic TCP ceiling is also available for packet floods.
+This is useful for hosting nodes where many customer servers share one IPv4 address.
 
-## Requirements
+## UFW integration
 
-Recommended environment:
+The installer reads existing UFW rules and searches for numeric port ranges.
 
-- Debian 13
-- Pterodactyl Wings
-- Docker
-- UFW
-- nftables
-- Root access
-
-The installer automatically installs these runtime dependencies when needed:
-
-- `nftables`
-- `curl`
-- `jq`
-- `ca-certificates`
-- `iproute2`
-
-## Installation
-
-Make the repository public if you want to use the raw GitHub installer without authentication.
-
-Run:
-
-```bash
-bash <(curl -sSL https://raw.githubusercontent.com/SukaSingkong/SyncGuard/main/install.sh)
-```
-
-Or download and execute it manually:
-
-```bash
-curl -sSL https://raw.githubusercontent.com/SukaSingkong/SyncGuard/main/install.sh -o install.sh
-chmod +x install.sh
-bash install.sh
-```
-
-## Interactive installer
-
-The installer works as a two-way setup wizard.
-
-Example:
-
-```text
-========================================
-       PTERODACTYL DDoS MITIGATION
-========================================
-
-Server detected:
-Hostname : node-01
-WAN      : enp5s0
-IPv4     : 203.0.113.10
-
-Use interface enp5s0? [Y/n]:
-Use IPv4 203.0.113.10? [Y/n]:
-
-Enable Discord notifications? [Y/n]:
-Discord Webhook:
-```
-
-The Discord webhook input is hidden from the terminal. The installer sends a test embed immediately and lets you retry if the webhook fails.
-
-## UFW range selection
-
-Pterodactyl installations commonly already have game allocation ranges allowed in UFW.
-
-For example:
+Example UFW configuration:
 
 ```text
 20000:60000/tcp   ALLOW IN   Anywhere
 20000:60000/udp   ALLOW IN   Anywhere
 ```
 
-The installer detects those ranges and presents them as selectable protection targets:
+The installer will present detected ranges interactively:
 
 ```text
 Port ranges found in UFW:
@@ -145,45 +125,49 @@ Multiple ranges can be selected:
 1,2
 ```
 
-TCP and UDP rules are generated separately according to the protocols actually allowed by UFW.
-
-If no usable UFW range is found, the installer offers manual input.
+If no suitable UFW range is found, the installer offers manual configuration.
 
 ## Protection profiles
 
-The installer includes four profiles.
+The installer provides several starting profiles.
 
 ### Recommended
 
-Designed as a reasonable starting point for general Minecraft hosting:
+Suitable as an initial profile for general Minecraft hosting:
 
 ```text
-TCP SYN:     1,500 packets/s per destination port
-TCP packet: 50,000 packets/s per destination port
-UDP packet: 20,000 packets/s per destination port
+TCP SYN:      1,500 packets/s per destination port
+TCP packets: 50,000 packets/s per destination port
+UDP packets: 20,000 packets/s per destination port
 ```
 
-Burst values are automatically set to 2x the selected threshold.
+Burst values are automatically configured at approximately twice the selected threshold.
 
 ### Relaxed
 
-Higher thresholds for busier nodes.
+Higher thresholds for busy nodes or workloads with large legitimate traffic bursts.
 
 ### Strict
 
-Lower thresholds for environments where traffic patterns are well understood.
+Lower thresholds for environments where normal traffic patterns are already well understood.
 
 ### Custom
 
-Lets the administrator enter all thresholds manually.
+Allows the administrator to define the thresholds manually.
 
-> Always tune thresholds using real production traffic. A value that is safe for one game or customer workload may be inappropriate for another.
+> Thresholds should be tuned using actual production traffic. A safe threshold for one workload may be too aggressive or too permissive for another.
 
 ## Discord notifications
 
-Discord notifications are optional.
+Discord integration is optional.
 
-When an attack is detected, Syncara Cloud DDoS Mitigation sends an embed similar to:
+During installation, the wizard asks whether Discord notifications should be enabled.
+
+The webhook URL is entered interactively and hidden from the terminal display.
+
+The installer immediately sends a test embed. If the webhook fails, you can retry with another webhook or continue without Discord.
+
+Example attack notification:
 
 ```text
 🚨 Flood Attack Detected
@@ -193,10 +177,10 @@ Public IP:   203.0.113.10
 Target:      TCP/25565
 Attack Type: TCP SYN Flood
 Threshold:   > 1,500 SYN/s
-Action:      Excess traffic dropped for this destination port
+Action:      Excess traffic is being dropped for this destination port.
 ```
 
-When the destination port returns below the configured threshold:
+When the attack ends:
 
 ```text
 ✅ Attack Mitigated
@@ -211,25 +195,43 @@ The webhook is stored locally in:
 /etc/ptero-guard.conf
 ```
 
-with restrictive file permissions.
+Do not commit a real Discord webhook URL to this repository.
 
-Never commit a real Discord webhook URL to GitHub.
+## Firewall behavior
+
+The mitigation table is attached to the detected WAN interface using nftables `netdev ingress`.
+
+This allows the original public destination port to be evaluated before Docker translates the traffic to a Pterodactyl container address.
+
+The project manages its own nftables table:
+
+```text
+netdev ptero_detect
+```
+
+It does **not** intentionally execute:
+
+```bash
+nft flush ruleset
+```
+
+because doing so could remove rules managed by UFW, Docker, or other services.
 
 ## Commands
 
-Show mitigation status:
+Show the current mitigation status:
 
 ```bash
 ptero-guard status
 ```
 
-Test the configured Discord webhook:
+Test Discord:
 
 ```bash
 ptero-guard test
 ```
 
-Reload nftables protection:
+Re-apply the mitigation rules:
 
 ```bash
 ptero-guard apply
@@ -253,13 +255,15 @@ Follow service logs:
 journalctl -u ptero-guard -f
 ```
 
-Follow mitigation event logs:
+Follow attack/recovery event logs:
 
 ```bash
 journalctl -t ptero-guard -f
 ```
 
 ## Installed files
+
+The installer creates the following main files:
 
 ```text
 /usr/local/sbin/ptero-guard
@@ -268,123 +272,95 @@ journalctl -t ptero-guard -f
 /run/ptero-guard/
 ```
 
-Firewall backups are stored in:
+Firewall backups are stored under:
 
 ```text
 /root/ptero-guard-backup/
 ```
 
-## Default mitigation logic
-
-The generated nftables table is named:
-
-```text
-netdev ptero_detect
-```
-
-It is attached to the detected WAN interface using `netdev ingress`.
-
-The protection logic includes:
-
-```text
-TCP SYN flood
-  -> rate calculated separately per TCP destination port
-  -> excess SYN packets dropped
-
-Generic TCP flood
-  -> packet rate calculated separately per TCP destination port
-  -> excess packets dropped
-
-UDP flood
-  -> packet rate calculated separately per UDP destination port
-  -> excess packets dropped
-```
-
-The project does **not** intentionally run:
-
-```bash
-nft flush ruleset
-```
-
-because that could remove UFW and Docker-managed firewall rules.
-
-## Docker / Pterodactyl note
-
-Pterodactyl Wings uses Docker, and Docker normally DNATs public allocation ports to container addresses.
-
-Syncara Cloud DDoS Mitigation attaches at network ingress so it can inspect the original public destination port **before Docker DNAT**.
-
-This is useful for a hosting node where many game servers share one public IPv4 address but use different ports.
-
-## Important limitations
-
-This project protects the local server and individual destination ports. It cannot prevent an attack from saturating the physical network link before packets reach the server.
-
-Example:
-
-```text
-Server uplink: 1 Gbps
-Incoming attack: 5 Gbps
-```
-
-Even if nftables drops every malicious packet locally, the 1 Gbps uplink can already be saturated.
-
-For production hosting, use:
-
-```text
-Upstream/provider DDoS filtering
-            +
-Pterodactyl DDoS Mitigation by Syncara Cloud
-```
-
-## Security notes
-
-Do not commit any of the following:
-
-- Discord webhook URLs
-- database passwords
-- private keys
-- API tokens
-- production `/etc/ptero-guard.conf`
-- other server credentials
-
-If a Discord webhook is accidentally exposed, regenerate it from Discord immediately.
-
-## Uninstall
+## Uninstallation
 
 Run the installer again:
 
 ```bash
-bash <(curl -sSL https://raw.githubusercontent.com/SukaSingkong/SyncGuard/main/install.sh)
+bash <(curl -sSL https://raw.githubusercontent.com/SukaSingkong/pterodactyl-ddos-mitigation/main/install.sh)
 ```
 
-Then choose:
+Then select:
 
 ```text
 Uninstall
 ```
 
-The uninstaller removes only the Syncara Cloud mitigation service and its own nftables table. It does not intentionally remove UFW or Docker firewall rules.
+The uninstaller removes the Syncara Cloud mitigation service and its own nftables table.
 
-## Project status
+It does not intentionally remove Docker or UFW rules.
 
-This project should be treated as a host-level mitigation layer that still requires real-world threshold tuning and testing for each production environment.
+## Important limitation
 
-Before deploying broadly:
+This is a **local mitigation layer**, not a replacement for upstream DDoS protection.
 
-1. Test on a staging node or low-risk node.
-2. Observe legitimate traffic.
-3. Confirm there are no false positives.
-4. Adjust thresholds as necessary.
-5. Keep upstream DDoS mitigation enabled.
+If a server has a `1 Gbps` uplink and receives a `5 Gbps` attack, the physical/network uplink can be saturated before local nftables rules have any opportunity to help other traffic.
+
+Recommended production architecture:
+
+```text
+Upstream / Provider DDoS Filtering
+              +
+Pterodactyl DDoS Mitigation by Syncara Cloud
+```
+
+Use this project as an additional host-level protection layer behind your provider's filtering.
+
+## Development & testing
+
+Before deploying changes to a production hosting node:
+
+1. Test the installer on a staging or low-risk node.
+2. Confirm that UFW ranges are detected correctly.
+3. Validate Discord notifications.
+4. Observe legitimate game traffic.
+5. Watch nftables drop counters for false positives.
+6. Adjust protection thresholds as necessary.
+
+Useful checks:
+
+```bash
+bash -n install.sh
+```
+
+and after installation:
+
+```bash
+nft list table netdev ptero_detect
+```
+
+## Security
+
+Never commit:
+
+- Discord webhook URLs
+- database passwords
+- API tokens
+- private keys
+- production copies of `/etc/ptero-guard.conf`
+- other server credentials
+
+If a webhook or credential is accidentally exposed, rotate it immediately.
+
+## Contributors ✨
+
+Created and maintained by **Syncara Cloud**.
+
+Contributions, testing reports, bug reports, and improvements are welcome through GitHub Issues and Pull Requests.
 
 ## License
 
 Licensed under the **BSD 3-Clause License**.
 
-See [`LICENSE`](LICENSE) for details.
+See [`LICENSE`](LICENSE) for the full license text.
 
 ---
 
 **Pterodactyl DDoS Mitigation by Syncara Cloud**  
-Per-port local mitigation for Pterodactyl hosting nodes.
+Per-port local flood mitigation for Pterodactyl game-hosting nodes.
