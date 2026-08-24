@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 VERSION="1.2.0"
-APP="Ptero Guard"
+APP="Pterodactyl DDoS Mitigation by Syncara Cloud"
 BIN="/usr/local/sbin/ptero-guard"
 CONF="/etc/ptero-guard.conf"
 SERVICE="/etc/systemd/system/ptero-guard.service"
