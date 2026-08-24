@@ -1,4 +1,4 @@
-# 🛡️ Pterodactyl DDoS Mitigation by Syncara Cloud
+# 🛡️ Pterodactyl DDoS Mitigation
 
 Unofficial per-port DDoS/flood mitigation scripts for **Pterodactyl Wings** nodes. Built for game-hosting environments where many customer servers share one public IP while using different allocation ports.
 
