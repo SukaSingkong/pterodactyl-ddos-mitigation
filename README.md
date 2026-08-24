@@ -1,4 +1,4 @@
-# 🛡️ Pterodactyl DDoS Mitigation by Syncara Cloud
+# 🛡️ Pterodactyl DDoS Mitigation
 
 Unofficial per-port DDoS/flood mitigation scripts for **Pterodactyl Wings** nodes. Built for game-hosting environments where many customer servers share one public IP while using different allocation ports.
 
@@ -56,15 +56,30 @@ This project is intended for Pterodactyl Wings nodes using Docker and nftables-c
 
 | Operating System | Version | Supported |
 | --- | ---: | :---: |
-| Debian | 13 | ✅ |
-| Debian | 12 | ⚠️ |
-| Ubuntu | 24.04 | ⚠️ |
-| Ubuntu | 22.04 | ⚠️ |
-| Other distributions | — | 🔴 |
+| Ubuntu | 14.04 | 🔴 |
+| | 16.04 | 🔴 * |
+| | 18.04 | 🔴 * |
+| | 20.04 | 🔴 * |
+| | 22.04 | ✅ |
+| | 24.04 | ✅ |
+| | 26.04 | ✅ |
+| Debian | 8 | 🔴 * |
+| | 9 | 🔴 * |
+| | 10 | ✅ |
+| | 11 | ✅ |
+| | 12 | ✅ |
+| | 13 | ✅ |
+| CentOS | 6 | 🔴 |
+| | 7 | 🔴 * |
+| | 8 | 🔴 * |
+| Rocky Linux | 8 | ✅ |
+| | 9 | ✅ |
+| AlmaLinux | 8 | ✅ |
+| | 9 | ✅ |
 
-`✅` = primary supported environment  
-`⚠️` = may work, but is not the primary tested target  
-`🔴` = currently unsupported by the installer
+`✅` = supported environment  
+`🔴` = unsupported environment  
+`*` = system is past End of Life (EOL)
 
 The primary target is **Debian 13 (Trixie)**.
 
@@ -359,8 +374,3 @@ Contributions, testing reports, bug reports, and improvements are welcome throug
 Licensed under the **BSD 3-Clause License**.
 
 See [`LICENSE`](LICENSE) for the full license text.
-
----
-
-**Pterodactyl DDoS Mitigation by Syncara Cloud**  
-Per-port local flood mitigation for Pterodactyl game-hosting nodes.
